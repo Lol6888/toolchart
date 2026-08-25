@@ -201,3 +201,106 @@ export const SAMPLE_BAR_DOC: ChartDocument = {
   ],
   freeTexts: [],
 };
+
+// ---------- Sample 3: CHROMATOGRAM (UV/Cond theo ml) ----------
+const UV = "#3A6FB0";
+const COND = "#E8A33D";
+const GRAY = "#E9E9E9";
+
+export const SAMPLE_CHROMA_DOC: ChartDocument = {
+  width: 1600,
+  height: 720,
+  background: "#FFFFFF",
+  defaultFontFamily: "Arial",
+  panels: [
+    {
+      id: "chroma",
+      title: { id: "ct", content: "236Wave022 - Emphaze - 2 001", x: 90, y: 26, fontSize: 15, fontFamily: "Arial", fontWeight: "bold", fontStyle: "normal", color: "#333", anchor: "start", rotation: 0 },
+      plotArea: { x: 90, y: 50, width: 1450, height: 560 },
+      xAxis: { label: "ml", min: -6000, max: 15000, ticks: [-6000, -4000, -2000, 0, 2000, 4000, 6000, 8000, 10000, 12000, 14000], tickFormat: "number" },
+      yAxis: { label: "mAU", min: 0, max: 3000, ticks: [0, 500, 1000, 1500, 2000, 2500], tickFormat: "number" },
+      regions: [
+        { id: "rg1", xStart: -6000, xEnd: 0, fill: GRAY, label: "Equilibration", labelColor: "#999" },
+        { id: "rg2", xStart: 12800, xEnd: 15000, fill: GRAY },
+        { id: "rl1", xStart: 0, xEnd: 8000, fill: "#FFFFFF", fillOpacity: 0, label: "Sample Application", labelColor: "#999" },
+        { id: "rl2", xStart: 8000, xEnd: 10500, fill: "#FFFFFF", fillOpacity: 0, label: "High Salt Column Wash", labelColor: "#999" },
+        { id: "rl3", xStart: 10500, xEnd: 12800, fill: "#FFFFFF", fillOpacity: 0, label: "pH 5 Column Wash", labelColor: "#999" },
+        { id: "rl4", xStart: 12800, xEnd: 13600, fill: "#FFFFFF", fillOpacity: 0, label: "Elution", labelColor: "#999" },
+        { id: "rl5", xStart: 13600, xEnd: 15000, fill: "#FFFFFF", fillOpacity: 0, label: "Equilibration", labelColor: "#999" },
+      ],
+      referenceLines: [],
+      series: [
+        { id: "cond", name: "Cond", color: COND, marker: "none", markerFilled: true, markerSize: 0, lineStyle: "solid", lineWidth: 1.6, showInLegend: true,
+          points: [
+            { x: -6000, y: 480 }, { x: -5500, y: 2820 }, { x: -4800, y: 2800 }, { x: -4600, y: 460 }, { x: -2000, y: 455 },
+            { x: 0, y: 455 }, { x: 500, y: 400 }, { x: 8000, y: 395 }, { x: 8100, y: 2820 }, { x: 10400, y: 2810 },
+            { x: 10550, y: 150 }, { x: 12800, y: 150 }, { x: 12900, y: 60 }, { x: 14000, y: 60 }, { x: 14300, y: 460 }, { x: 15000, y: 460 },
+          ] },
+        { id: "uv", name: "UV 1_280", color: UV, marker: "none", markerFilled: true, markerSize: 0, lineStyle: "solid", lineWidth: 1.6, showInLegend: true,
+          points: [
+            { x: -6000, y: 10 }, { x: -5500, y: 120 }, { x: -5400, y: 10 }, { x: 0, y: 5 }, { x: 500, y: 40 },
+            { x: 650, y: 1980 }, { x: 8000, y: 2000 }, { x: 8150, y: 60 }, { x: 9000, y: 120 }, { x: 10500, y: 150 },
+            { x: 10600, y: 880 }, { x: 11000, y: 400 }, { x: 12000, y: 180 }, { x: 12700, y: 120 }, { x: 12900, y: 20 },
+            { x: 15000, y: 15 },
+          ] },
+        { id: "uvpeak", name: "UV peak", color: UV, marker: "none", markerFilled: true, markerSize: 0, lineStyle: "solid", lineWidth: 1.6, showInLegend: false, smooth: true,
+          areaFill: { color: "#AEC7E8", opacity: 0.55 },
+          points: [
+            { x: 12820, y: 20 }, { x: 12900, y: 400 }, { x: 12980, y: 2850 }, { x: 13120, y: 2840 }, { x: 13250, y: 500 }, { x: 13380, y: 30 },
+          ] },
+      ],
+      legends: [
+        { id: "cleg", bounds: { x: 1520, y: 40, width: 70, height: 50 }, entries: [ { refId: "uv", label: "UV 1_280" }, { refId: "cond", label: "Cond" } ], fontSize: 12, fontFamily: "Arial", showBorder: false, background: "transparent" },
+      ],
+      insets: [],
+      showBorder: true,
+    },
+  ],
+  freeTexts: [
+    { id: "peaklbl", content: "13054.57", x: 1385, y: 44, fontSize: 12, fontFamily: "Arial", fontWeight: "normal", fontStyle: "normal", color: "#333", anchor: "middle", rotation: 0 },
+  ],
+};
+
+// ---------- Sample 4: DECONVOLUTION (đường bao + component dots, trục mũi tên) ----------
+const gauss = (mu: number, sig: number, amp: number, x0: number, x1: number, step: number) => {
+  const pts = [];
+  for (let x = x0; x <= x1 + 1e-9; x += step) pts.push({ x: round(x), y: round(amp * Math.exp(-((x - mu) ** 2) / (2 * sig * sig))) });
+  return pts;
+};
+const round = (v: number) => Math.round(v * 1000) / 1000;
+const BLUE_C = "#3030C0", GREEN_C = "#2E8B2E", RED_C = "#D02020", CYAN = "#4FC3E5", AXG = "#22A522";
+const comps = { blue: { mu: 2.2, sig: 0.7, amp: 2.3 }, green: { mu: 4.3, sig: 0.72, amp: 5.2 }, red: { mu: 6.0, sig: 0.72, amp: 5.3 } };
+const envelope = [];
+for (let x = 0.6; x <= 8.4 + 1e-9; x += 0.12) {
+  const y = comps.blue.amp * Math.exp(-((x - comps.blue.mu) ** 2) / (2 * comps.blue.sig ** 2)) +
+    comps.green.amp * Math.exp(-((x - comps.green.mu) ** 2) / (2 * comps.green.sig ** 2)) +
+    comps.red.amp * Math.exp(-((x - comps.red.mu) ** 2) / (2 * comps.red.sig ** 2));
+  envelope.push({ x: round(x), y: round(y) });
+}
+
+export const SAMPLE_DECONV_DOC: ChartDocument = {
+  width: 720,
+  height: 640,
+  background: "#FFFFFF",
+  defaultFontFamily: "Arial",
+  panels: [
+    {
+      id: "deconv",
+      plotArea: { x: 80, y: 40, width: 600, height: 540 },
+      xAxis: { label: "", min: 0, max: 9, ticks: [], tickFormat: "number", axisStyle: "arrow", color: AXG, showTickLabels: false },
+      yAxis: { label: "Concentration", min: 0, max: 9, ticks: [], tickFormat: "number", axisStyle: "arrow", color: AXG, showTickLabels: false },
+      regions: [],
+      referenceLines: [],
+      series: [
+        { id: "env", name: "Envelope", color: CYAN, marker: "none", markerFilled: true, markerSize: 0, lineStyle: "solid", lineWidth: 2, showInLegend: false, smooth: true, points: envelope },
+        { id: "cb", name: "Comp 1", color: BLUE_C, marker: "circle", markerFilled: true, markerSize: 5, lineStyle: "none", lineWidth: 0, showInLegend: false, points: gauss(comps.blue.mu, comps.blue.sig, comps.blue.amp, 0.8, 3.6, 0.11) },
+        { id: "cg", name: "Comp 2", color: GREEN_C, marker: "circle", markerFilled: true, markerSize: 5, lineStyle: "none", lineWidth: 0, showInLegend: false, points: gauss(comps.green.mu, comps.green.sig, comps.green.amp, 2.6, 6.0, 0.11) },
+        { id: "cr", name: "Comp 3", color: RED_C, marker: "circle", markerFilled: true, markerSize: 5, lineStyle: "none", lineWidth: 0, showInLegend: false, points: gauss(comps.red.mu, comps.red.sig, comps.red.amp, 4.2, 7.8, 0.11) },
+      ],
+      legends: [],
+      insets: [],
+      showBorder: false,
+    },
+  ],
+  freeTexts: [],
+};

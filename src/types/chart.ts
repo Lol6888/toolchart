@@ -21,6 +21,12 @@ export interface Axis {
   // 'linear' (mặc định): scale theo min/max. 'category': mỗi tick là 1 nhóm đều nhau,
   // dùng cho bar chart phân loại (vd trục pI: 4.5, 7.0, 8.5, 10.5). Bỏ trống = linear.
   type?: "linear" | "category";
+  // 'plain' (mặc định): đường trục thẳng. 'arrow': vẽ mũi tên ở đầu trục (kiểu sơ đồ khái niệm).
+  axisStyle?: "plain" | "arrow";
+  // Màu đường/chữ trục. Bỏ trống = đen.
+  color?: string;
+  // false => ẩn số trên trục (vẫn giữ min/max để scale). Mặc định true.
+  showTickLabels?: boolean;
 }
 
 export interface DataPoint {
@@ -57,6 +63,23 @@ export interface Series {
   // Với bar: mỗi DataPoint có toạ độ trên trục category = giá trị category (vd y=8.5),
   // toạ độ trên trục giá trị = độ dài thanh tính từ 0 (vd x=80). Error bar áp lên trục giá trị.
   // point.filled=false => thanh chỉ có viền, không tô (thanh trắng).
+
+  // Tô vùng dưới đường (line) xuống đáy (y=0). Dùng cho peak elution, đường bao... Bỏ trống = không tô.
+  areaFill?: { color: string; opacity: number };
+  // true => vẽ đường cong mượt (spline Catmull-Rom) thay vì đoạn thẳng gấp khúc. Dùng cho đường bao trơn.
+  smooth?: boolean;
+}
+
+// Vùng nền theo khoảng trục X (dải pha trong chromatogram, hoặc nền xám xen kẽ).
+export interface Region {
+  id: string;
+  xStart: number;
+  xEnd: number;
+  fill: string; // hex
+  fillOpacity?: number; // mặc định 1
+  label?: string;
+  labelColor?: string;
+  labelPosition?: "top" | "bottom"; // mặc định bottom
 }
 
 export interface ReferenceLine {
@@ -111,6 +134,8 @@ export interface Panel {
   series: Series[];
   referenceLines: ReferenceLine[];
   legends: Legend[];
+  // Vùng nền theo khoảng trục X (dải pha, nền xám). Vẽ dưới cùng. Bỏ trống = không có.
+  regions?: Region[];
   // Biểu đồ lồng bên trong (đệ quy). Rỗng nếu không có.
   insets: Panel[];
   showBorder: boolean;

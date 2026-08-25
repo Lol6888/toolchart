@@ -6,7 +6,7 @@ import { EditPanel } from "./components/EditPanel";
 import { SelectionPanel } from "./components/SelectionPanel";
 import type { Selection } from "./editor/util";
 import { exportSvg, exportPdf } from "./utils/export";
-import { SAMPLE_DOC, SAMPLE_BAR_DOC } from "./sample/example";
+import { SAMPLE_DOC, SAMPLE_BAR_DOC, SAMPLE_CHROMA_DOC, SAMPLE_DECONV_DOC } from "./sample/example";
 
 const LS_KEY = "toolchart_api_key";
 const LS_MODEL = "toolchart_model";
@@ -102,6 +102,12 @@ export default function App() {
         </button>
         <button className="btn ghost" onClick={() => { setDoc(SAMPLE_BAR_DOC); setSelected(null); }}>
           Mẫu bar
+        </button>
+        <button className="btn ghost" onClick={() => { setDoc(SAMPLE_CHROMA_DOC); setSelected(null); }}>
+          Mẫu chromatogram
+        </button>
+        <button className="btn ghost" onClick={() => { setDoc(SAMPLE_DECONV_DOC); setSelected(null); }}>
+          Mẫu deconvolution
         </button>
       </div>
 

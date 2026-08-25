@@ -10,6 +10,7 @@ import type {
   MarkerShape,
   LineStyle,
   DataPoint,
+  Region,
 } from "../types/chart";
 import {
   type Selection,
@@ -48,6 +49,29 @@ const EditorContext = createContext<EditorCtx>({
 const SEL_COLOR = "#1d4ed8"; // màu highlight khi chọn
 
 // ---- helpers ----
+
+// Đường gấp khúc từ các điểm pixel đã scale.
+function polylineD(pts: { x: number; y: number }[]): string {
+  return pts.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ");
+}
+
+// Đường cong mượt qua các điểm (Catmull-Rom -> Bezier). Giúp đường trơn dù ít điểm.
+function smoothPathD(pts: { x: number; y: number }[]): string {
+  if (pts.length < 3) return polylineD(pts);
+  let d = `M ${pts[0].x} ${pts[0].y}`;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[i - 1] ?? pts[i];
+    const p1 = pts[i];
+    const p2 = pts[i + 1];
+    const p3 = pts[i + 2] ?? p2;
+    const cp1x = p1.x + (p2.x - p0.x) / 6;
+    const cp1y = p1.y + (p2.y - p0.y) / 6;
+    const cp2x = p2.x - (p3.x - p1.x) / 6;
+    const cp2y = p2.y - (p3.y - p1.y) / 6;
+    d += ` C ${cp1x} ${cp1y} ${cp2x} ${cp2y} ${p2.x} ${p2.y}`;
+  }
+  return d;
+}
 
 function dashArray(style: LineStyle, w: number): string | undefined {
   if (style === "dashed") return `${w * 4} ${w * 3}`;
@@ -140,6 +164,11 @@ function AxesAndGrid({ p }: { p: Panel }) {
   const { plotArea: a, xAxis: ax, yAxis: ay } = p;
   const left = a.x;
   const bottom = a.y + a.height;
+  const xColor = ax.color ?? "#000";
+  const yColor = ay.color ?? "#000";
+  const xLabels = ax.showTickLabels !== false;
+  const yLabels = ay.showTickLabels !== false;
+  const arrow = 7;
   return (
     <g>
       {/* khung plot */}
@@ -155,17 +184,26 @@ function AxesAndGrid({ p }: { p: Panel }) {
         />
       )}
       {/* trục X + Y */}
-      <line x1={left} y1={bottom} x2={a.x + a.width} y2={bottom} stroke="#000" strokeWidth={1} />
-      <line x1={left} y1={a.y} x2={left} y2={bottom} stroke="#000" strokeWidth={1} />
+      <line x1={left} y1={bottom} x2={a.x + a.width} y2={bottom} stroke={xColor} strokeWidth={ax.axisStyle === "arrow" ? 2 : 1} />
+      <line x1={left} y1={a.y} x2={left} y2={bottom} stroke={yColor} strokeWidth={ay.axisStyle === "arrow" ? 2 : 1} />
+      {/* mũi tên đầu trục (kiểu sơ đồ) */}
+      {ax.axisStyle === "arrow" && (
+        <polygon points={`${a.x + a.width + arrow},${bottom} ${a.x + a.width},${bottom - arrow / 1.6} ${a.x + a.width},${bottom + arrow / 1.6}`} fill={xColor} />
+      )}
+      {ay.axisStyle === "arrow" && (
+        <polygon points={`${left},${a.y - arrow} ${left - arrow / 1.6},${a.y} ${left + arrow / 1.6},${a.y}`} fill={yColor} />
+      )}
       {/* tick X */}
       {ax.ticks.map((t, i) => {
         const x = scaleX(p, t);
         return (
           <g key={`xt${i}`}>
-            <line x1={x} y1={bottom} x2={x} y2={bottom + 5} stroke="#000" strokeWidth={1} />
-            <text x={x} y={bottom + 18} textAnchor="middle" fontSize={12} fill="#000">
-              {fmtTick(t, ax.tickFormat)}
-            </text>
+            <line x1={x} y1={bottom} x2={x} y2={bottom + 5} stroke={xColor} strokeWidth={1} />
+            {xLabels && (
+              <text x={x} y={bottom + 18} textAnchor="middle" fontSize={12} fill={xColor}>
+                {fmtTick(t, ax.tickFormat)}
+              </text>
+            )}
           </g>
         );
       })}
@@ -174,36 +212,69 @@ function AxesAndGrid({ p }: { p: Panel }) {
         const y = scaleY(p, t);
         return (
           <g key={`yt${i}`}>
-            <line x1={left - 5} y1={y} x2={left} y2={y} stroke="#000" strokeWidth={1} />
-            <text x={left - 9} y={y + 4} textAnchor="end" fontSize={12} fill="#000">
-              {fmtTick(t, ay.tickFormat)}
-            </text>
+            <line x1={left - 5} y1={y} x2={left} y2={y} stroke={yColor} strokeWidth={1} />
+            {yLabels && (
+              <text x={left - 9} y={y + 4} textAnchor="end" fontSize={12} fill={yColor}>
+                {fmtTick(t, ay.tickFormat)}
+              </text>
+            )}
           </g>
         );
       })}
       {/* nhãn trục X */}
-      <text
-        x={a.x + a.width / 2}
-        y={bottom + 40}
-        textAnchor="middle"
-        fontSize={13}
-        fontWeight="bold"
-        fill="#000"
-      >
-        {ax.label}
-      </text>
+      {ax.label && (
+        <text
+          x={a.x + a.width / 2}
+          y={bottom + 40}
+          textAnchor="middle"
+          fontSize={13}
+          fontWeight="bold"
+          fill={xColor}
+        >
+          {ax.label}
+        </text>
+      )}
       {/* nhãn trục Y (xoay dọc) */}
-      <text
-        x={left - 44}
-        y={a.y + a.height / 2}
-        textAnchor="middle"
-        fontSize={13}
-        fontWeight="bold"
-        fill="#000"
-        transform={`rotate(-90 ${left - 44} ${a.y + a.height / 2})`}
-      >
-        {ay.label}
-      </text>
+      {ay.label && (
+        <text
+          x={left - 44}
+          y={a.y + a.height / 2}
+          textAnchor="middle"
+          fontSize={13}
+          fontWeight="bold"
+          fill={yColor}
+          transform={`rotate(-90 ${left - 44} ${a.y + a.height / 2})`}
+        >
+          {ay.label}
+        </text>
+      )}
+    </g>
+  );
+}
+
+// Vùng nền theo khoảng trục X (dải pha / nền xám xen kẽ).
+function RegionsRenderer({ p }: { p: Panel }) {
+  const regions: Region[] = p.regions ?? [];
+  const { plotArea: a } = p;
+  return (
+    <g>
+      {regions.map((r) => {
+        const x1 = scaleX(p, r.xStart);
+        const x2 = scaleX(p, r.xEnd);
+        const x = Math.min(x1, x2);
+        const w = Math.abs(x2 - x1);
+        const labelY = (r.labelPosition ?? "bottom") === "top" ? a.y + 16 : a.y + a.height - 8;
+        return (
+          <g key={r.id}>
+            <rect x={x} y={a.y} width={w} height={a.height} fill={r.fill} fillOpacity={r.fillOpacity ?? 1} />
+            {r.label && (
+              <text x={x + w / 2} y={labelY} textAnchor="middle" fontSize={12} fill={r.labelColor ?? "#888"}>
+                {r.label}
+              </text>
+            )}
+          </g>
+        );
+      })}
     </g>
   );
 }
@@ -262,11 +333,17 @@ function ErrorBars({ p, s, pt }: { p: Panel; s: Series; pt: DataPoint }) {
 
 function SeriesRenderer({ p, s }: { p: Panel; s: Series }) {
   const ed = useContext(EditorContext);
-  const pathD = s.points
-    .map((pt, i) => `${i === 0 ? "M" : "L"} ${scaleX(p, pt.x)} ${scaleY(p, pt.y)}`)
-    .join(" ");
+  const pixels = s.points.map((pt) => ({ x: scaleX(p, pt.x), y: scaleY(p, pt.y) }));
+  const pathD = s.smooth ? smoothPathD(pixels) : polylineD(pixels);
+  const baseline = scaleY(p, Math.max(0, p.yAxis.min));
+  const areaD =
+    pixels.length > 1 && s.areaFill
+      ? `${pathD} L ${pixels[pixels.length - 1].x} ${baseline} L ${pixels[0].x} ${baseline} Z`
+      : "";
   return (
     <g>
+      {/* tô vùng dưới đường (vẽ trước cùng) */}
+      {areaD && <path d={areaD} fill={s.areaFill!.color} fillOpacity={s.areaFill!.opacity} stroke="none" />}
       {/* error bars vẽ trước để marker đè lên */}
       {s.points.map((pt, i) => (
         <ErrorBars key={`e${i}`} p={p} s={s} pt={pt} />
@@ -524,6 +601,8 @@ function TextRenderer({ t }: { t: TextSpec }) {
 function PanelRenderer({ p }: { p: Panel }) {
   return (
     <g>
+      {/* vùng nền vẽ dưới cùng */}
+      <RegionsRenderer p={p} />
       {p.title && <TextRenderer t={p.title} />}
       <AxesAndGrid p={p} />
       {p.referenceLines.map((r) => (

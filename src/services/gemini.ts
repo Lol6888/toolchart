@@ -21,6 +21,40 @@ function fileToBase64(file: File): Promise<string> {
   });
 }
 
+// Phóng ảnh sao cho cạnh dài >= minLongSide (mặc định 2048) trước khi gửi Gemini,
+// giúp model thấy rõ chi tiết (chữ nhỏ, chấm, error bar) hơn với ảnh gốc nhỏ.
+// LƯU Ý: đây là nội suy canvas, KHÔNG tạo chi tiết mới — chỉ hữu ích khi ảnh gốc nhỏ.
+// Ảnh đã lớn hơn ngưỡng thì giữ nguyên. Trả về base64 PNG + mimeType.
+function loadImage(file: File): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = URL.createObjectURL(file);
+  });
+}
+
+async function preprocessImage(
+  file: File,
+  minLongSide = 2048
+): Promise<{ base64: string; mimeType: string }> {
+  const img = await loadImage(file);
+  const long = Math.max(img.naturalWidth, img.naturalHeight);
+  if (long >= minLongSide || long === 0) {
+    return { base64: await fileToBase64(file), mimeType: file.type || "image/png" };
+  }
+  const scale = minLongSide / long;
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(img.naturalWidth * scale);
+  canvas.height = Math.round(img.naturalHeight * scale);
+  const ctx = canvas.getContext("2d")!;
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+  const dataUrl = canvas.toDataURL("image/png");
+  return { base64: dataUrl.split(",")[1], mimeType: "image/png" };
+}
+
 // Lấy JSON ra khỏi text kể cả khi model bọc trong ```json ... ```
 function parseJsonLoose(text: string): ChartDocument {
   let t = text.trim();
@@ -37,7 +71,7 @@ export async function analyzeChart(
   file: File,
   cfg: GeminiConfig
 ): Promise<ChartDocument> {
-  const base64 = await fileToBase64(file);
+  const { base64, mimeType } = await preprocessImage(file);
   const url = `${ENDPOINT}/${cfg.model}:generateContent?key=${encodeURIComponent(cfg.apiKey)}`;
 
   const body = {
@@ -46,7 +80,7 @@ export async function analyzeChart(
         role: "user",
         parts: [
           { text: EXTRACTION_PROMPT },
-          { inline_data: { mime_type: file.type || "image/png", data: base64 } },
+          { inline_data: { mime_type: mimeType, data: base64 } },
         ],
       },
     ],
