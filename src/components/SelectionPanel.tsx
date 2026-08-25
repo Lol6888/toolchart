@@ -1,5 +1,5 @@
 import type { ChartDocument, Series, DataPoint } from "../types/chart";
-import { type Selection, findPanel, walkPanels, uid } from "../editor/util";
+import { type Selection, findPanel, walkPanels, uid, densifyPoints } from "../editor/util";
 
 export function SelectionPanel({
   doc,
@@ -141,6 +141,12 @@ function PointEditor({
       onSelect(null);
     });
 
+  const densify = () =>
+    update((d) => {
+      const s = findPanel(d, selected.panelId)?.series.find((x) => x.id === selected.seriesId);
+      if (s) s.points = densifyPoints(s.points, 1);
+    });
+
   const duplicateSeries = () =>
     update((d) => {
       const p = findPanel(d, selected.panelId);
@@ -204,6 +210,9 @@ function PointEditor({
         <button className="btn danger sm" onClick={deletePoint}>Xoá điểm</button>
       </div>
       <div className="btn-row">
+        <button className="btn sm" onClick={densify} title="Chèn thêm chấm giữa mỗi cặp điểm, đặt đúng trên đường cong">
+          ×2 chấm ({series.points.length})
+        </button>
         <button className="btn ghost sm" onClick={duplicateSeries}>Nhân đôi series</button>
         <button className="btn danger sm" onClick={deleteSeries}>Xoá series</button>
       </div>
