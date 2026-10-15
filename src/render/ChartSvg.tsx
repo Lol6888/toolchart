@@ -176,6 +176,20 @@ function AxesAndGrid({ p }: { p: Panel }) {
   const xLabels = ax.showTickLabels !== false;
   const yLabels = ay.showTickLabels !== false;
   const arrow = 7;
+  // Cỡ chữ trục (mặc định 12/13 như cũ); khoảng cách tick/nhãn co giãn theo tỉ lệ cỡ chữ.
+  const xTfs = ax.fontSize ?? 12, xLfs = ax.labelFontSize ?? 13;
+  const yTfs = ay.fontSize ?? 12, yLfs = ay.labelFontSize ?? 13;
+  const xKt = xTfs / 12, xKl = xLfs / 13, yKt = yTfs / 12;
+  // labelOffset (đo từ ảnh) = khoảng cách trục -> tâm chữ; đổi ra baseline (tâm chữ ~ baseline - 0.35 cỡ chữ).
+  const xLabelY = ax.labelOffset !== undefined ? bottom + ax.labelOffset + 0.35 * xLfs : bottom + 18 * xKt + 22 * xKl;
+  // Không đo được thì đặt ngoài số tick dài nhất; không khai báo cỡ chữ => giữ khoảng 44 cũ.
+  const yMaxLen = yLabels ? Math.max(0, ...ay.ticks.map((t) => fmtTick(t, ay).length)) : 0;
+  const yLabelOff =
+    ay.labelOffset !== undefined
+      ? ay.labelOffset - 0.35 * yLfs
+      : ay.fontSize === undefined && ay.labelFontSize === undefined
+        ? 44
+        : 9 * yKt + yMaxLen * 0.5 * yTfs + 0.4 * yLfs;
   return (
     <g>
       {/* lưới: gridLines của trục X kẻ dọc, của trục Y kẻ ngang */}
@@ -214,9 +228,9 @@ function AxesAndGrid({ p }: { p: Panel }) {
         const x = scaleX(p, t);
         return (
           <g key={`xt${i}`}>
-            <line x1={x} y1={bottom} x2={x} y2={bottom + 5} stroke={xColor} strokeWidth={1} />
+            <line x1={x} y1={bottom} x2={x} y2={bottom + 5 * xKt} stroke={xColor} strokeWidth={1} />
             {xLabels && (
-              <text x={x} y={bottom + 18} textAnchor="middle" fontSize={12} fill={xColor}>
+              <text x={x} y={bottom + 18 * xKt} textAnchor="middle" fontSize={xTfs} fill={xColor}>
                 {fmtTick(t, ax)}
               </text>
             )}
@@ -228,9 +242,9 @@ function AxesAndGrid({ p }: { p: Panel }) {
         const y = scaleY(p, t);
         return (
           <g key={`yt${i}`}>
-            <line x1={left - 5} y1={y} x2={left} y2={y} stroke={yColor} strokeWidth={1} />
+            <line x1={left - 5 * yKt} y1={y} x2={left} y2={y} stroke={yColor} strokeWidth={1} />
             {yLabels && (
-              <text x={left - 9} y={y + 4} textAnchor="end" fontSize={12} fill={yColor}>
+              <text x={left - 9 * yKt} y={y + 4 * yKt} textAnchor="end" fontSize={yTfs} fill={yColor}>
                 {fmtTick(t, ay)}
               </text>
             )}
@@ -241,10 +255,10 @@ function AxesAndGrid({ p }: { p: Panel }) {
       {ax.label && (
         <text
           x={a.x + a.width / 2}
-          y={bottom + 40}
+          y={xLabelY}
           textAnchor="middle"
-          fontSize={13}
-          fontWeight="bold"
+          fontSize={xLfs}
+          fontWeight={ax.labelBold === false ? "normal" : "bold"}
           fill={xColor}
         >
           {ax.label}
@@ -253,13 +267,13 @@ function AxesAndGrid({ p }: { p: Panel }) {
       {/* nhãn trục Y (xoay dọc) */}
       {ay.label && (
         <text
-          x={left - 44}
+          x={left - yLabelOff}
           y={a.y + a.height / 2}
           textAnchor="middle"
-          fontSize={13}
-          fontWeight="bold"
+          fontSize={yLfs}
+          fontWeight={ay.labelBold === false ? "normal" : "bold"}
           fill={yColor}
-          transform={`rotate(-90 ${left - 44} ${a.y + a.height / 2})`}
+          transform={`rotate(-90 ${left - yLabelOff} ${a.y + a.height / 2})`}
         >
           {ay.label}
         </text>
@@ -267,8 +281,8 @@ function AxesAndGrid({ p }: { p: Panel }) {
       {/* vùng bắt click chọn trục (phủ số tick + nhãn trục) */}
       {ed.editable && (
         <>
-          <rect x={a.x} y={bottom} width={a.width} height={48} fill="transparent" style={{ cursor: "pointer" }} onPointerDown={pickAxis("x")} />
-          <rect x={left - 60} y={a.y} width={60} height={a.height} fill="transparent" style={{ cursor: "pointer" }} onPointerDown={pickAxis("y")} />
+          <rect x={a.x} y={bottom} width={a.width} height={Math.max(48, xLabelY - bottom + 8)} fill="transparent" style={{ cursor: "pointer" }} onPointerDown={pickAxis("x")} />
+          <rect x={left - Math.max(60, yLabelOff + yLfs)} y={a.y} width={Math.max(60, yLabelOff + yLfs)} height={a.height} fill="transparent" style={{ cursor: "pointer" }} onPointerDown={pickAxis("y")} />
         </>
       )}
     </g>

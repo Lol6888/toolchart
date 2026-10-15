@@ -420,6 +420,20 @@ function AxisInspector({ doc, sel, update }: { doc: ChartDocument; sel: Extract<
         </div>
         <Check label="Hiện số trên trục" checked={ax.showTickLabels !== false} onChange={(v) => edit((a) => (a.showTickLabels = v ? undefined : false))} />
       </Section>
+      <Section title="Cỡ chữ">
+        <div className="grid2">
+          <Field label="Số trên trục">
+            <NumInput value={ax.fontSize ?? 12} step={1} onChange={(v) => edit((a) => (a.fontSize = Math.max(1, v ?? 12)))} />
+          </Field>
+          <Field label="Tên trục">
+            <NumInput value={ax.labelFontSize ?? 13} step={1} onChange={(v) => edit((a) => (a.labelFontSize = Math.max(1, v ?? 13)))} />
+          </Field>
+        </div>
+        <Field label="Khoảng cách trục → tên trục">
+          <NumInput value={ax.labelOffset} allowEmpty placeholder="tự động" step={1} onChange={(v) => edit((a) => (a.labelOffset = v))} />
+        </Field>
+        <Check label="Tên trục in đậm" checked={ax.labelBold !== false} onChange={(v) => edit((a) => (a.labelBold = v ? undefined : false))} />
+      </Section>
       <Section title="Kiểu trục">
         <div className="grid2">
           <Field label="Màu trục">
