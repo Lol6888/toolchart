@@ -304,3 +304,69 @@ export const SAMPLE_DECONV_DOC: ChartDocument = {
   ],
   freeTexts: [],
 };
+
+// ---------- Sample 5: HISTOGRAM DÀY (cell counter) + đường fit Gaussian ----------
+// Dữ liệu tổng hợp (giả lập), bố cục theo kiểu báo cáo máy đếm tế bào: ~800 vạch, lưới, bảng dưới.
+const HIST_PLOT = { x: 89.5, y: 37, width: 825, height: 420 };
+const histStems = (() => {
+  let seed = 7;
+  const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  const pts = [];
+  const cols = Math.round(HIST_PLOT.width);
+  for (let c = 1; c < cols; c++) {
+    const x = 4 + (c / cols) * 30;
+    // vùng mảnh vụn bên trái thưa vạch; vùng đỉnh dày đặc
+    if (x < 6.2 ? c % 14 !== 0 : x < 13.5 && c % 4 !== 0) continue;
+    const y =
+      x < 6.2
+        ? 180
+        : (115 * Math.exp(-((x - 17.1) ** 2) / (2 * 1.4 ** 2)) +
+            32 * Math.exp(-((x - 19.8) ** 2) / (2 * 2.6 ** 2)) +
+            60 * Math.exp(-(x - 6.2) / 1.1) +
+            12 * Math.exp(-((x - 10.5) ** 2) / 8)) *
+          (0.8 + 0.4 * rnd());
+    if (y >= 0.8) pts.push({ x: round(x), y: round(Math.min(180, y)) });
+  }
+  return pts;
+})();
+const histTick = (k: number) => round(4 + k * 1.875);
+const HIST_TXT = { fontFamily: "Arial", fontWeight: "normal" as const, fontStyle: "normal" as const, color: "#000", rotation: 0 };
+
+export const SAMPLE_HIST_DOC: ChartDocument = {
+  width: 936,
+  height: 605,
+  background: "#FFFFFF",
+  defaultFontFamily: "Arial",
+  panels: [
+    {
+      id: "hist",
+      title: { id: "htitle", content: "CellCounter - 2018-09-05 - Test 01.csv", x: 92, y: 27, fontSize: 18, anchor: "start", ...HIST_TXT },
+      plotArea: HIST_PLOT,
+      xAxis: { label: "Diameter (µm)", min: 4, max: 34, ticks: Array.from({ length: 17 }, (_, k) => histTick(k)), tickFormat: "number", tickDecimals: 1,
+        gridLines: Array.from({ length: 31 }, (_, k) => round(4 + (k + 1) * 0.9375)), gridColor: "#D8D8F8" },
+      yAxis: { label: "Count", min: 0, max: 180, ticks: [0, 180], tickFormat: "number",
+        gridLines: [20, 40, 60, 80, 100, 120, 140, 160], gridColor: "#D8D8F8" },
+      regions: [],
+      referenceLines: [],
+      series: [
+        { id: "hbars", name: "Count", color: "#1E1EA0", marker: "none", markerFilled: true, markerSize: 0, lineStyle: "solid", lineWidth: 1, showInLegend: false, kind: "stem", points: histStems },
+        { id: "hfit", name: "Curve fit", color: "#C00000", marker: "none", markerFilled: true, markerSize: 0, lineStyle: "solid", lineWidth: 1.5, showInLegend: false, smooth: true,
+          areaFill: { color: "#2EB42D", opacity: 1 }, points: gauss(17.05, 1.25, 125, 13.0, 21.2, 0.2) },
+      ],
+      legends: [],
+      insets: [],
+      showBorder: true,
+    },
+  ],
+  freeTexts: [
+    { id: "hts", content: "Sep 5 2018 15:05:49", x: 910, y: 27, fontSize: 18, anchor: "end", ...HIST_TXT },
+    { id: "hc1", content: "Concentrations", x: 282, y: 562, fontSize: 18, anchor: "middle", ...HIST_TXT },
+    { id: "hc2", content: "Curve Fit Concentration:   4.80e+005 cells/mL", x: 30, y: 597, fontSize: 17, anchor: "start", ...HIST_TXT },
+    { id: "hs1", content: "Cell/Particle Size", x: 745, y: 562, fontSize: 18, anchor: "middle", ...HIST_TXT },
+    { id: "hs2", content: "Mean Cell Diameter:   17.050 µm (Fit)", x: 522, y: 597, fontSize: 17, anchor: "start", ...HIST_TXT },
+  ],
+  freeLines: [
+    { id: "hl1", x1: 30, y1: 570, x2: 478, y2: 570, color: "#000", lineWidth: 1 },
+    { id: "hl2", x1: 522, y1: 570, x2: 912, y2: 570, color: "#000", lineWidth: 1 },
+  ],
+};
