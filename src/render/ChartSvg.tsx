@@ -79,9 +79,9 @@ function dashArray(style: LineStyle, w: number): string | undefined {
   return undefined; // solid
 }
 
-function fmtTick(v: number, fmt: Axis["tickFormat"]): string {
-  const s = Number.isInteger(v) ? String(v) : String(v);
-  return fmt === "percent" ? `${s}%` : s;
+function fmtTick(v: number, ax: Axis): string {
+  const s = ax.tickDecimals !== undefined ? v.toFixed(ax.tickDecimals) : String(v);
+  return ax.tickFormat === "percent" ? `${s}%` : s;
 }
 
 // Vị trí pixel cho 1 category trên trục phân loại (đều nhau theo index tick).
@@ -161,16 +161,32 @@ function Marker({
 // ---- sub-renderers ----
 
 function AxesAndGrid({ p }: { p: Panel }) {
+  const ed = useContext(EditorContext);
   const { plotArea: a, xAxis: ax, yAxis: ay } = p;
   const left = a.x;
   const bottom = a.y + a.height;
-  const xColor = ax.color ?? "#000";
-  const yColor = ay.color ?? "#000";
+  const axisSel = (which: "x" | "y") =>
+    !!ed.selected && ed.selected.kind === "axis" && ed.selected.panelId === p.id && ed.selected.axis === which;
+  const xColor = axisSel("x") ? SEL_COLOR : ax.color ?? "#000";
+  const yColor = axisSel("y") ? SEL_COLOR : ay.color ?? "#000";
+  const pickAxis = (which: "x" | "y") => (e: React.PointerEvent) => {
+    e.stopPropagation();
+    ed.select({ kind: "axis", panelId: p.id, axis: which });
+  };
   const xLabels = ax.showTickLabels !== false;
   const yLabels = ay.showTickLabels !== false;
   const arrow = 7;
   return (
     <g>
+      {/* lưới: gridLines của trục X kẻ dọc, của trục Y kẻ ngang */}
+      {(ax.gridLines ?? []).map((v, i) => {
+        const x = scaleX(p, v);
+        return <line key={`gx${i}`} x1={x} y1={a.y} x2={x} y2={bottom} stroke={ax.gridColor ?? "#DDDDDD"} strokeWidth={1} />;
+      })}
+      {(ay.gridLines ?? []).map((v, i) => {
+        const y = scaleY(p, v);
+        return <line key={`gy${i}`} x1={left} y1={y} x2={a.x + a.width} y2={y} stroke={ay.gridColor ?? "#DDDDDD"} strokeWidth={1} />;
+      })}
       {/* khung plot */}
       {p.showBorder && (
         <rect
@@ -201,7 +217,7 @@ function AxesAndGrid({ p }: { p: Panel }) {
             <line x1={x} y1={bottom} x2={x} y2={bottom + 5} stroke={xColor} strokeWidth={1} />
             {xLabels && (
               <text x={x} y={bottom + 18} textAnchor="middle" fontSize={12} fill={xColor}>
-                {fmtTick(t, ax.tickFormat)}
+                {fmtTick(t, ax)}
               </text>
             )}
           </g>
@@ -215,7 +231,7 @@ function AxesAndGrid({ p }: { p: Panel }) {
             <line x1={left - 5} y1={y} x2={left} y2={y} stroke={yColor} strokeWidth={1} />
             {yLabels && (
               <text x={left - 9} y={y + 4} textAnchor="end" fontSize={12} fill={yColor}>
-                {fmtTick(t, ay.tickFormat)}
+                {fmtTick(t, ay)}
               </text>
             )}
           </g>
@@ -247,6 +263,13 @@ function AxesAndGrid({ p }: { p: Panel }) {
         >
           {ay.label}
         </text>
+      )}
+      {/* vùng bắt click chọn trục (phủ số tick + nhãn trục) */}
+      {ed.editable && (
+        <>
+          <rect x={a.x} y={bottom} width={a.width} height={48} fill="transparent" style={{ cursor: "pointer" }} onPointerDown={pickAxis("x")} />
+          <rect x={left - 60} y={a.y} width={60} height={a.height} fill="transparent" style={{ cursor: "pointer" }} onPointerDown={pickAxis("y")} />
+        </>
       )}
     </g>
   );
@@ -340,22 +363,57 @@ function SeriesRenderer({ p, s }: { p: Panel; s: Series }) {
     pixels.length > 1 && s.areaFill
       ? `${pathD} L ${pixels[pixels.length - 1].x} ${baseline} L ${pixels[0].x} ${baseline} Z`
       : "";
+  const stemD = s.kind === "stem" ? pixels.map((q) => `M ${q.x} ${baseline} V ${q.y}`).join(" ") : "";
+  const sel = ed.selected;
+  const seriesSel =
+    !!sel && (sel.kind === "series" || sel.kind === "point") && sel.panelId === p.id && sel.seriesId === s.id;
+  const pickSeries = (e: React.PointerEvent) => {
+    e.stopPropagation();
+    ed.select({ kind: "series", panelId: p.id, seriesId: s.id });
+  };
   return (
     <g>
       {/* tô vùng dưới đường (vẽ trước cùng) */}
       {areaD && <path d={areaD} fill={s.areaFill!.color} fillOpacity={s.areaFill!.opacity} stroke="none" />}
+      {/* viền sáng cho series đang chọn */}
+      {seriesSel && pixels.length > 1 && (
+        <path
+          d={stemD || pathD}
+          fill="none"
+          stroke={SEL_COLOR}
+          strokeOpacity={0.35}
+          strokeWidth={Math.max(s.lineWidth + 4, 4)}
+          pointerEvents="none"
+        />
+      )}
+      {/* histogram dạng vạch: mỗi điểm 1 vạch dọc từ đáy lên y */}
+      {s.kind === "stem" && (
+        <path
+          d={stemD}
+          fill="none"
+          stroke={s.color}
+          strokeWidth={s.lineWidth}
+          style={ed.editable ? { cursor: "pointer" } : undefined}
+          onPointerDown={ed.editable ? pickSeries : undefined}
+        />
+      )}
+      {/* vùng bắt click cả đường (rộng hơn nét thật) để chọn series */}
+      {ed.editable && s.kind !== "stem" && pixels.length > 1 && (
+        <path d={pathD} fill="none" stroke="transparent" strokeWidth={12} style={{ cursor: "pointer" }} onPointerDown={pickSeries} />
+      )}
       {/* error bars vẽ trước để marker đè lên */}
       {s.points.map((pt, i) => (
         <ErrorBars key={`e${i}`} p={p} s={s} pt={pt} />
       ))}
       {/* đường nối */}
-      {s.lineStyle !== "none" && s.points.length > 1 && (
+      {s.kind !== "stem" && s.lineStyle !== "none" && s.points.length > 1 && (
         <path
           d={pathD}
           fill="none"
           stroke={s.color}
           strokeWidth={s.lineWidth}
           strokeDasharray={dashArray(s.lineStyle, s.lineWidth)}
+          pointerEvents="none"
         />
       )}
       {/* markers */}
@@ -634,8 +692,8 @@ function dedupeFreeTexts(doc: ChartDocument): TextSpec[] {
     reserved.add(p.xAxis.label.trim());
     reserved.add(p.yAxis.label.trim());
     if (p.title) reserved.add(p.title.content.trim());
-    p.xAxis.ticks.forEach((t) => reserved.add(fmtTick(t, p.xAxis.tickFormat)));
-    p.yAxis.ticks.forEach((t) => reserved.add(fmtTick(t, p.yAxis.tickFormat)));
+    p.xAxis.ticks.forEach((t) => reserved.add(fmtTick(t, p.xAxis)));
+    p.yAxis.ticks.forEach((t) => reserved.add(fmtTick(t, p.yAxis)));
   }
   const seen = new Set<string>();
   return doc.freeTexts.filter((t) => {
@@ -695,6 +753,9 @@ export function ChartSvg({
         } else {
           pt.y = clampAxis(p.yAxis, invLinear(p.yAxis, a.y, a.height, sp.y, true));
         }
+      } else if (s.kind === "stem") {
+        // vạch histogram: chỉ kéo chiều cao, giữ nguyên vị trí cột
+        pt.y = clampAxis(p.yAxis, invLinear(p.yAxis, a.y, a.height, sp.y, true));
       } else {
         if (p.xAxis.type !== "category")
           pt.x = invLinear(p.xAxis, a.x, a.width, sp.x, false);
@@ -767,6 +828,9 @@ export function ChartSvg({
         />
         {doc.panels.map((p) => (
           <PanelRenderer key={p.id} p={p} />
+        ))}
+        {(doc.freeLines ?? []).map((l) => (
+          <line key={l.id} x1={l.x1} y1={l.y1} x2={l.x2} y2={l.y2} stroke={l.color} strokeWidth={l.lineWidth} />
         ))}
         {/* Bỏ freeText trùng nhãn trục / tick / tiêu đề (Gemini hay nhét bản sao gây đè chữ). */}
         {dedupeFreeTexts(doc).map((t) => (

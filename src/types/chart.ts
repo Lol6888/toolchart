@@ -27,6 +27,12 @@ export interface Axis {
   color?: string;
   // false => ẩn số trên trục (vẫn giữ min/max để scale). Mặc định true.
   showTickLabels?: boolean;
+  // Số chữ số thập phân khi in tick (vd 1 => "4.0"). Bỏ trống = in nguyên giá trị.
+  tickDecimals?: number;
+  // Giá trị trên trục này để kẻ lưới vuông góc (độc lập với ticks, vd trục chỉ ghi 0 và 180
+  // nhưng lưới cách 20). Bỏ trống = không kẻ lưới.
+  gridLines?: number[];
+  gridColor?: string; // mặc định xám nhạt
 }
 
 export interface DataPoint {
@@ -56,7 +62,9 @@ export interface Series {
 
   // --- Bar chart ---
   // 'line' (mặc định): vẽ đường + marker. 'bar': vẽ thanh. Bỏ trống = line.
-  kind?: "line" | "bar";
+  // 'stem': mỗi điểm là 1 vạch dọc từ đáy (y=0) lên y, rộng lineWidth — dùng cho histogram
+  // dày hàng trăm thanh trên trục số liên tục. Điểm của stem được quét lại từ pixel ảnh gốc.
+  kind?: "line" | "bar" | "stem";
   // Chỉ dùng khi kind='bar'. 'horizontal': thanh chạy dọc trục X, nhóm theo category trên trục Y.
   // 'vertical': thanh chạy dọc trục Y, nhóm theo category trên trục X. Bỏ trống = vertical.
   barOrientation?: "horizontal" | "vertical";
@@ -150,4 +158,17 @@ export interface ChartDocument {
   panels: Panel[];
   // Text tự do không thuộc panel nào (hiếm dùng).
   freeTexts: TextSpec[];
+  // Đường kẻ tự do ngoài panel (vd gạch chân bảng thống kê dưới biểu đồ). Bỏ trống = không có.
+  freeLines?: FreeLine[];
+}
+
+export interface FreeLine {
+  id: string;
+  // pixel document
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+  color: string;
+  lineWidth: number;
 }

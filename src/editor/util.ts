@@ -3,6 +3,8 @@ import type { ChartDocument, Panel, Axis } from "../types/chart";
 // Phần tử đang được chọn trên canvas.
 export type Selection =
   | { kind: "point"; panelId: string; seriesId: string; index: number }
+  | { kind: "series"; panelId: string; seriesId: string }
+  | { kind: "axis"; panelId: string; axis: "x" | "y" }
   | { kind: "text"; id: string };
 
 export function round2(v: number): number {
