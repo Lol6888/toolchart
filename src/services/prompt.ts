@@ -28,7 +28,9 @@ Panel = {
   "insets": [ Panel ],                                              // nested inset charts, [] if none
   "showBorder": boolean
 }
-Axis = { "label": string, "min": number, "max": number, "ticks": [number], "tickFormat": "percent" | "number", "type"?: "linear"|"category", "axisStyle"?: "plain"|"arrow", "color"?: hex, "showTickLabels"?: boolean, "tickDecimals"?: number, "gridLines"?: [number], "gridColor"?: hex }
+Axis = { "label": string, "min": number, "max": number, "ticks": [number], "tickFormat": "percent" | "number", "type"?: "linear"|"category", "axisStyle"?: "plain"|"arrow", "color"?: hex, "showTickLabels"?: boolean, "tickDecimals"?: number, "gridLines"?: [number], "gridColor"?: hex, "fontSize": number, "labelFontSize": number, "labelBold": boolean, "labelOffset"?: number }
+  // "fontSize" = font size in pixels (same coordinate space as plotArea) of the tick numbers; "labelFontSize" = of the axis title; "labelBold" = whether the axis title is bold. Measure them from the image — do not assume 12.
+  // "labelOffset" = perpendicular distance in pixels from the axis line to the CENTER of the axis title text (X axis: downward from the bottom axis line; Y axis: leftward from the left axis line). Measure it; omit only if the axis has no title.
   // "ticks" = ONLY the values that have a printed number on the axis. If labels show a fixed number of decimals (e.g. "4.0", "5.9"), set "tickDecimals" (here 1).
   // GRID: if the plot has grid lines, list the DATA values where they are drawn in "gridLines" of the axis they are measured on (X-axis gridLines = vertical lines, Y-axis gridLines = horizontal lines) and their color in "gridColor". Grid lines are independent of ticks: e.g. a Y axis labelled only "0" and "180" with 9 horizontal grid lines => ticks [0,180], gridLines [20,40,...,160]. Count the grid lines carefully.
   // min/max must be the values at the plot area's edges (where the frame / axis lines are).

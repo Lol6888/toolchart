@@ -33,6 +33,14 @@ export interface Axis {
   // nhưng lưới cách 20). Bỏ trống = không kẻ lưới.
   gridLines?: number[];
   gridColor?: string; // mặc định xám nhạt
+  // Cỡ chữ (px document) của số trên trục và của tên trục; tên trục đậm hay không.
+  // Bỏ trống = 12 / 13 / đậm (như cũ). Ảnh đã upscale ~2048px thì cần cỡ lớn tương ứng.
+  fontSize?: number;
+  labelFontSize?: number;
+  labelBold?: boolean;
+  // Khoảng cách (px document) từ đường trục tới TÂM chữ tên trục, đo từ ảnh.
+  // Bỏ trống = tự tính theo cỡ chữ.
+  labelOffset?: number;
 }
 
 export interface DataPoint {
